@@ -9,12 +9,15 @@
  * This work is licensed under the terms of the GNU GPL, version 2.  See
  * the COPYING file in the top-level directory.
  */
-#ifndef __LED_H
-#define __LED_H
+#ifndef __SUN_COMMON_H
+#define __SUN_COMMON_H
 
-#include "stm32f4xx_hal.h"
-#include "stm32f4xx_nucleo_144.h"
+#define TRUE    1
+#define FALSE   0
 
-void led_init(void);
+enum sun_err{
+    PARA_ERR    = -1,
+    NO_ERR      = 0,
+};
 
 #endif

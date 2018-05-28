@@ -11,117 +11,160 @@
  */
 #include "main.h"
 #include "sun_task.h"
+#include "sun_semaphore.h"
+#include "sun_timer.h"
 #include "led.h"
+#include "uart.h"
 
 #define STOP_CPU  __asm("BKPT #0\n")
 
-UART_HandleTypeDef UartHandle;
-
-/* Private function prototypes -----------------------------------------------*/
-#ifdef __GNUC__
-/* With GCC, small printf (option LD Linker->Libraries->Small printf
-   set to 'Yes') calls __io_putchar() */
-#define PUTCHAR_PROTOTYPE int __io_putchar(int ch)
-#else
-#define PUTCHAR_PROTOTYPE int fputc(int ch, FILE *f)
-#endif /* __GNUC__ */
-
 static void SystemClock_Config(void);
 static void Error_Handler(void);
+static void EXTI15_10_IRQHandler_Config(void);
 
 static void task0(void);
 static void task1(void);
 static void task2(void);
 
-volatile uint32_t systick_count;
-long long task0_stack[1024], task1_stack[1024], task2_stack[1024];
+int32_t timer1_cb(void * data);
+int32_t timer2_cb(void * data);
 
+volatile uint32_t systick_count;
+long long task0_stack[32], task1_stack[32], task2_stack[32];
+struct semaphore sem1;
+
+char * msg = "flynn";
 int main(void)
 {
-  SCB->CCR |= SCB_CCR_STKALIGN_Msk;
-  /* STM32F4xx HAL library initialization:
-       - Configure the Flash prefetch
-       - Systick timer is configured by default as source of time base, but user
-         can eventually implement his proper time base source (a general purpose
-         timer for example or other time source), keeping in mind that Time base
-         duration should be kept 1ms since PPP_TIMEOUT_VALUEs are defined and
-         handled in milliseconds basis.
-       - Set NVIC Group Priority to 4
-       - Low Level Initialization
-     */
-  HAL_Init();
+    SCB->CCR |= SCB_CCR_STKALIGN_Msk;
+    /* STM32F4xx HAL library initialization:
+         - Configure the Flash prefetch
+         - Systick timer is configured by default as source of time base, but user
+           can eventually implement his proper time base source (a general purpose
+           timer for example or other time source), keeping in mind that Time base
+           duration should be kept 1ms since PPP_TIMEOUT_VALUEs are defined and
+           handled in milliseconds basis.
+         - Set NVIC Group Priority to 4
+         - Low Level Initialization
+       */
+    HAL_Init();
 
-  /* Configure the system clock to 180 MHz */
-  SystemClock_Config();
+    /* Configure the system clock to 180 MHz */
+    SystemClock_Config();
 
-  NVIC_SetPriority(PendSV_IRQn, 0xFF);
+    NVIC_SetPriority(PendSV_IRQn, 0xFF);
 
-  led_init();
+    led_init();
 
-  UartHandle.Instance        = USARTx;
-  UartHandle.Init.BaudRate   = 115200;
-  UartHandle.Init.WordLength = UART_WORDLENGTH_9B;
-  UartHandle.Init.StopBits   = UART_STOPBITS_1;
-  UartHandle.Init.Parity     = UART_PARITY_ODD;
-  UartHandle.Init.HwFlowCtl  = UART_HWCONTROL_NONE;
-  UartHandle.Init.Mode       = UART_MODE_TX_RX;
-  UartHandle.Init.OverSampling = UART_OVERSAMPLING_16;
-  if(HAL_UART_Init(&UartHandle) != HAL_OK)
-  {
-    /* Initialization Error */
-    Error_Handler();
-  }
+    EXTI15_10_IRQHandler_Config();
 
-  create_task((unsigned int)task0_stack, sizeof(task0_stack), (uint32_t)task0);
-  create_task((unsigned int)task1_stack, sizeof(task1_stack), (uint32_t)task1);
-  create_task((unsigned int)task2_stack, sizeof(task2_stack), (uint32_t)task2);
+    uart_init(115200);
 
-  start_task(0);
-  task0();
-  while(1){
-    STOP_CPU;
-  }
+    init_semaphore(&sem1, 10);
+
+    sun_timer_init();
+
+    create_task((unsigned int)task0_stack, sizeof(task0_stack), (uint32_t)task0);
+    create_task((unsigned int)task1_stack, sizeof(task1_stack), (uint32_t)task1);
+    create_task((unsigned int)task2_stack, sizeof(task2_stack), (uint32_t)task2);
+
+    sun_timer_malloc(5000, timer1_cb, msg);
+    sun_timer_malloc(1000, timer2_cb, msg);
+    start_task(0);
+    task0();
+    while(1){
+        STOP_CPU;
+    }
+}
+
+int32_t timer1_cb(void * data)
+{
+    printf("%s this is 5s timer cb\n", (char *)data);
+    sun_timer_malloc(5000, timer1_cb, msg);
+    return 0;
+}
+
+int32_t timer2_cb(void * data)
+{
+    printf("%s this is 1s timer cb\n", (char *)data);
+    sun_timer_malloc(1000, timer2_cb, msg);
+    return 0;
 }
 
 void task0(void)
 {
-  /* Output a message on Hyperterminal using printf function */
-  printf("\n**************sun os init complete**************\n");
+    uint32_t old_time = 0;
+    /* Output a message on Hyperterminal using printf function */
+    printf("\n**************sun os init complete**************\n");
 
-  while(1){
-    if(systick_count%0x20 == 0)
-      HAL_GPIO_TogglePin(LED1_GPIO_PORT, LED1_PIN);
-  }
+    while(1){
+        if(systick_count>old_time+200){
+            pend_semaphore(&sem1, 100);
+            printf("task0 sem cnt %d \n", sem1.cnt);
+            HAL_GPIO_TogglePin(LED1_GPIO_PORT, LED1_PIN);
+            old_time = systick_count;
+        }
+    }
 }
 
 void task1(void)
 {
-  while(1){
-    if(systick_count%0x50 == 0)
-      HAL_GPIO_TogglePin(LED2_GPIO_PORT, LED2_PIN);
-  }
+    uint32_t old_time = 0;
+    while(1){
+        if(systick_count>old_time+400){
+            HAL_GPIO_TogglePin(LED2_GPIO_PORT, LED2_PIN);
+            old_time = systick_count;
+        }
+    }
 }
 
 void task2(void)
 {
-  while(1){
-    if(systick_count%0x40 == 0)
-      HAL_GPIO_TogglePin(LED3_GPIO_PORT, LED3_PIN);
-  }
+    uint32_t old_time = 0;
+    while(1){
+        if(systick_count>old_time+800){
+            HAL_GPIO_TogglePin(LED3_GPIO_PORT, LED3_PIN);
+            old_time = systick_count;
+        }
+    }
+}
+
+static void EXTI15_10_IRQHandler_Config(void)
+{
+    GPIO_InitTypeDef   GPIO_InitStructure;
+
+    /* Enable GPIOC clock */
+    __HAL_RCC_GPIOC_CLK_ENABLE();
+
+    /* Configure PC.13 pin as input floating */
+    GPIO_InitStructure.Mode = GPIO_MODE_IT_RISING;
+    GPIO_InitStructure.Pull = GPIO_NOPULL;
+    GPIO_InitStructure.Pin = GPIO_PIN_13;
+    HAL_GPIO_Init(GPIOC, &GPIO_InitStructure);
+
+    /* Enable and set EXTI line 15_10 Interrupt to the lowest priority */
+    HAL_NVIC_SetPriority(EXTI15_10_IRQn, 2, 0);
+    HAL_NVIC_EnableIRQ(EXTI15_10_IRQn);
 }
 
 /**
-  * @brief  Retargets the C library printf function to the USART.
-  * @param  None
+  * @brief EXTI line detection callbacks
+  * @param GPIO_Pin: Specifies the pins connected EXTI line
   * @retval None
   */
-PUTCHAR_PROTOTYPE
+void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin)
 {
-  /* Place your implementation of fputc here */
-  /* e.g. write a character to the USART3 and Loop until the end of transmission */
-  HAL_UART_Transmit(&UartHandle, (uint8_t *)&ch, 1, 0xFFFF);
+    if (GPIO_Pin == GPIO_PIN_13)
+    {
+        if(get_task_state(2) == RUNNING){
+            suspend_task(2);
+        }else{
+            resume_task(2);
+        }
 
-  return ch;
+        post_semaphore(&sem1);
+        printf("IRQ sem cnt %d \n", sem1.cnt);
+    }
 }
 
 /**

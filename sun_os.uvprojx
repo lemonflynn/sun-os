@@ -459,6 +459,11 @@
               <FileType>1</FileType>
               <FilePath>.\App\Src\stm32f4xx_hal_msp.c</FilePath>
             </File>
+            <File>
+              <FileName>uart.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>.\App\Src\uart.c</FilePath>
+            </File>
           </Files>
         </Group>
         <Group>
@@ -468,6 +473,16 @@
               <FileName>sun_task.c</FileName>
               <FileType>1</FileType>
               <FilePath>.\OS\sun_task.c</FilePath>
+            </File>
+            <File>
+              <FileName>sun_semaphore.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>.\OS\sun_semaphore.c</FilePath>
+            </File>
+            <File>
+              <FileName>sun_timer.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>.\OS\sun_timer.c</FilePath>
             </File>
           </Files>
         </Group>

@@ -12,10 +12,12 @@
 #include "main.h"
 #include "stm32f4xx_it.h"
 #include "sun_task.h"
+#include "sun_timer.h"
 
 extern struct sun_tcb * curr_tcb;
 extern struct sun_tcb * next_tcb;
 extern volatile uint32_t systick_count;
+extern uint8_t sun_os_start;
 
 /**
   * @brief  This function handles NMI exception.
@@ -103,23 +105,23 @@ void DebugMon_Handler(void)
   */
 __asm void PendSV_Handler(void)
 {
-  //Save current context
-  MRS     R0, PSP         //get current process stack point value
-  STMDB   R0!, {R4-R11}   //save r4-r11 in task stack
-  LDR     R1, =__cpp(&curr_tcb) //get the address of curr_tcb
-  LDR     R7,[R1]         //get the value of curr_tcb
-  STR     R0,[R7]         //get the stack base
+    //Save current context
+    MRS     R0, PSP         //get current process stack point value
+    STMDB   R0!, {R4-R11}   //save r4-r11 in task stack
+    LDR     R1, =__cpp(&curr_tcb) //get the address of curr_tcb
+    LDR     R7,[R1]         //get the value of curr_tcb
+    STR     R0,[R7]         //get the stack base
 
-  //load next context
-  LDR     R4,=__cpp(&next_tcb)
-  LDR     R4,[R4]
-  STR     R4,[R1]         //set curr_task = next_task
-  LDR     R0,[R4]
-  LDMIA   R0!,{R4-R11}
+    //load next context
+    LDR     R4,=__cpp(&next_tcb)
+    LDR     R4,[R4]
+    STR     R4,[R1]         //set curr_task = next_task
+    LDR     R0,[R4]
+    LDMIA   R0!,{R4-R11}
 
-  MSR     PSP, R0
-  BX      LR
-  ALIGN   4
+    MSR     PSP, R0
+    BX      LR
+    ALIGN   4
 }
 
 /**
@@ -129,20 +131,23 @@ __asm void PendSV_Handler(void)
   */
 void SysTick_Handler(void)
 {
-  HAL_IncTick();
-  systick_count++;
-  for(next_tcb = curr_tcb->next_sun_tcb; next_tcb->state == PENDING; next_tcb = next_tcb->next_sun_tcb);
-  //switch(curr_task){
-  //  case 0: next_task=1;break;
-  //  case 1: next_task=2;break;
-  //  case 2: next_task=0;break;
-  //  default:
-  //    next_task=0;
-  //    break;
-  //}
-  if(curr_tcb != next_tcb){
-    SCB->ICSR |= SCB_ICSR_PENDSVSET_Msk;
-  }
+    HAL_IncTick();
+    sun_timer_handler();
+
+    systick_count++;
+    if(sun_os_start == FALSE)
+        return;
+
+    for(next_tcb = curr_tcb->next_sun_tcb; next_tcb->state == PENDING; next_tcb = next_tcb->next_sun_tcb);
+
+    if(curr_tcb != next_tcb){
+        SCB->ICSR |= SCB_ICSR_PENDSVSET_Msk;
+    }
+}
+
+void EXTI15_10_IRQHandler(void)
+{
+    HAL_GPIO_EXTI_IRQHandler(USER_BUTTON_PIN);
 }
 
 /******************************************************************************/
