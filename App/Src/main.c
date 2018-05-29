@@ -13,6 +13,7 @@
 #include "sun_task.h"
 #include "sun_semaphore.h"
 #include "sun_timer.h"
+#include "sun_ipc.h"
 #include "led.h"
 #include "uart.h"
 
@@ -32,11 +33,26 @@ int32_t timer2_cb(void * data);
 volatile uint32_t systick_count;
 long long task0_stack[32], task1_stack[32], task2_stack[32];
 struct semaphore sem1;
+struct msg_queue msg_queue1;
+
+static char banner[] =
+	"\n"
+	"====================================================\n"
+	" Copyright(C) 2018-2019 The Sun OS Project  \n"
+	"====================================================\n"
+    "Author: Francisco Flynn \n"
+	"Build: "  __DATE__ " " __TIME__"\n"
+	"\n";
 
 char * msg = "flynn";
+char message_test[32] = "";
+
 int main(void)
 {
+    /* Enable double word stack alignment, recommended in Cortex-M3 r1p1,
+       default in Cortex-M3 r2px and Cortex-M4*/
     SCB->CCR |= SCB_CCR_STKALIGN_Msk;
+
     /* STM32F4xx HAL library initialization:
          - Configure the Flash prefetch
          - Systick timer is configured by default as source of time base, but user
@@ -64,6 +80,10 @@ int main(void)
 
     sun_timer_init();
 
+    msg_pool_init();
+
+    init_msg_queue(&msg_queue1, 10);
+
     create_task((unsigned int)task0_stack, sizeof(task0_stack), (uint32_t)task0);
     create_task((unsigned int)task1_stack, sizeof(task1_stack), (uint32_t)task1);
     create_task((unsigned int)task2_stack, sizeof(task2_stack), (uint32_t)task2);
@@ -79,15 +99,31 @@ int main(void)
 
 int32_t timer1_cb(void * data)
 {
-    printf("%s this is 5s timer cb\n", (char *)data);
+    static uint32_t i;
+    //printf("%s this is 5s timer cb\n", (char *)data);
     sun_timer_malloc(5000, timer1_cb, msg);
+
+    sprintf(message_test, "this is %d times message\n", i++);
+    printf("push message\n\t %s", message_test);
+    push_msg_queue(&msg_queue1, message_test, sizeof(message_test));
+
     return 0;
 }
 
 int32_t timer2_cb(void * data)
 {
-    printf("%s this is 1s timer cb\n", (char *)data);
+    char * message = NULL;
+    uint32_t size;
+    int32_t ret = 0;
+    //printf("%s this is 1s timer cb\n", (char *)data);
     sun_timer_malloc(1000, timer2_cb, msg);
+
+    ret = pop_msg_queue(&msg_queue1, &message, &size);
+    if(ret != NO_ERR)
+        return ret;
+
+    printf("Get a message:\n \t %s", message);
+
     return 0;
 }
 
@@ -95,7 +131,7 @@ void task0(void)
 {
     uint32_t old_time = 0;
     /* Output a message on Hyperterminal using printf function */
-    printf("\n**************sun os init complete**************\n");
+    printf("%s", banner);
 
     while(1){
         if(systick_count>old_time+200){

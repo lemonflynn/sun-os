@@ -18,7 +18,7 @@ static int32_t sun_timer_scheduler(uint32_t ms, struct sun_timer * timer_in);
 
 static struct sun_timer timer_pool[MAX_TIMER];
 static struct sun_timer * free_timer_list;
-static struct sun_timer * event_queue;
+static struct sun_timer * event_queue; /* event queue holds timer user malloced, should be a FIFO */
 
 void sun_timer_init(void)
 {
@@ -67,6 +67,7 @@ int32_t sun_timer_scheduler(uint32_t ms, struct sun_timer * timer_in)
         return NO_ERR;
     }
 
+    /*this timer will be insert into the first position of the queue*/
     if(ms < next_timer->delta){
         timer_in->next = event_queue;
         timer_in->delta = ms;
@@ -76,6 +77,7 @@ int32_t sun_timer_scheduler(uint32_t ms, struct sun_timer * timer_in)
         return NO_ERR;
     }
 
+    /*this timer will be insert into the middle of the queue*/
 loop:
     timer = next_timer;
     raw_time += timer->delta;

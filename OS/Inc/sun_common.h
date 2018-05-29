@@ -16,8 +16,11 @@
 #define FALSE   0
 
 enum sun_err{
-    PARA_ERR    = -1,
-    NO_ERR      = 0,
+    MSG_POOL_EMPTY  = -4,
+    QUEUE_EMPTY_ERR = -3,
+    QUEUE_FULL_ERR  = -2,
+    PARA_ERR        = -1,
+    NO_ERR          = 0,
 };
 
 #endif

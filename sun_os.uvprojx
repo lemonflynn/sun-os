@@ -335,7 +335,7 @@
               <MiscControls></MiscControls>
               <Define>STM32F429xx,USE_HAL_DRIVER,USE_STM32F4XX_NUCLEO_144</Define>
               <Undefine></Undefine>
-              <IncludePath>.\App\Inc;.\Arch\STM32F4\CMSIS\Device\ST\STM32F4xx\Include;.\Arch\STM32F4\CMSIS\Include;.\Arch\STM32F4\STM32F4xx_HAL_Driver\Inc;.\Arch\STM32F4\BSP\STM32F4xx_Nucleo_144;.\OS</IncludePath>
+              <IncludePath>.\App\Inc;.\Arch\STM32F4\CMSIS\Device\ST\STM32F4xx\Include;.\Arch\STM32F4\CMSIS\Include;.\Arch\STM32F4\STM32F4xx_HAL_Driver\Inc;.\Arch\STM32F4\BSP\STM32F4xx_Nucleo_144;.\OS\Inc</IncludePath>
             </VariousControls>
           </Cads>
           <Aads>
@@ -470,19 +470,24 @@
           <GroupName>OS</GroupName>
           <Files>
             <File>
-              <FileName>sun_task.c</FileName>
-              <FileType>1</FileType>
-              <FilePath>.\OS\sun_task.c</FilePath>
-            </File>
-            <File>
               <FileName>sun_semaphore.c</FileName>
               <FileType>1</FileType>
-              <FilePath>.\OS\sun_semaphore.c</FilePath>
+              <FilePath>.\OS\Src\sun_semaphore.c</FilePath>
+            </File>
+            <File>
+              <FileName>sun_task.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>.\OS\Src\sun_task.c</FilePath>
             </File>
             <File>
               <FileName>sun_timer.c</FileName>
               <FileType>1</FileType>
-              <FilePath>.\OS\sun_timer.c</FilePath>
+              <FilePath>.\OS\Src\sun_timer.c</FilePath>
+            </File>
+            <File>
+              <FileName>sun_ipc.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>.\OS\Src\sun_ipc.c</FilePath>
             </File>
           </Files>
         </Group>

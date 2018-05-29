@@ -135,7 +135,7 @@ void SysTick_Handler(void)
     sun_timer_handler();
 
     systick_count++;
-    if(sun_os_start == FALSE)
+    if(!sun_os_start)
         return;
 
     for(next_tcb = curr_tcb->next_sun_tcb; next_tcb->state == PENDING; next_tcb = next_tcb->next_sun_tcb);
@@ -149,30 +149,3 @@ void EXTI15_10_IRQHandler(void)
 {
     HAL_GPIO_EXTI_IRQHandler(USER_BUTTON_PIN);
 }
-
-/******************************************************************************/
-/*                 STM32F4xx Peripherals Interrupt Handlers                   */
-/*  Add here the Interrupt Handler for the used peripheral(s) (PPP), for the  */
-/*  available peripheral interrupt handler's name please refer to the startup */
-/*  file (startup_stm32f4xx.s).                                               */
-/******************************************************************************/
-
-/**
-  * @brief  This function handles PPP interrupt request.
-  * @param  None
-  * @retval None
-  */
-/*void PPP_IRQHandler(void)
-{
-}*/
-
-
-/**
-  * @}
-  */
-
-/**
-  * @}
-  */
-
-/************************ (C) COPYRIGHT STMicroelectronics *****END OF FILE****/
