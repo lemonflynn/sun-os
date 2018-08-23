@@ -51,27 +51,6 @@ static char banner[] =
 char * msg = "flynn";
 char message_test[32] = "";
 static uint32_t mpu_test;
-int foo1(int limit)
-{
-    int i;
-    int ret = 1;
-
-    for(i=0;i<limit;i++)
-        ret = ret*i;
-
-    return ret;
-}
-
-int foo2(int limit)
-{
-    int i;
-    int ret = 1;
-
-    for(i=limit;i!=0;i--)
-        ret = ret*i;
-
-    return ret;
-}
 
 int main(void)
 {
@@ -113,8 +92,6 @@ int main(void)
 
     mpu_setup();
 
-    ret = foo1(100);
-    ret = foo2(100);
     /*it's not necessary to init task0's stack frame, because it use the same
     stack frame as main function, put it here is just for consistency*/
     create_task("task0", (unsigned int)task0_stack, sizeof(task0_stack), (uint32_t)task0);
