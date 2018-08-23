@@ -13,6 +13,7 @@
 #include "stm32f4xx_it.h"
 #include "sun_task.h"
 #include "sun_timer.h"
+#include "sun_mpu.h"
 
 extern struct sun_tcb * curr_tcb;
 extern struct sun_tcb * next_tcb;
@@ -36,9 +37,8 @@ void NMI_Handler(void)
 void HardFault_Handler(void)
 {
   /* Go to infinite loop when Hard Fault exception occurs */
-  while (1)
-  {
-  }
+ 	while (1)
+		__asm("BKPT #0\n");
 }
 
 /**
@@ -49,9 +49,8 @@ void HardFault_Handler(void)
 void MemManage_Handler(void)
 {
   /* Go to infinite loop when Memory Manage exception occurs */
-  while (1)
-  {
-  }
+ 	while (1)
+		__asm("BKPT #0\n");
 }
 
 /**
@@ -105,17 +104,26 @@ void DebugMon_Handler(void)
   */
 __asm void PendSV_Handler(void)
 {
+		import mpu_task_schedule
     //Save current context
     MRS     R0, PSP         //get current process stack point value
     STMDB   R0!, {R4-R11}   //save r4-r11 in task stack
     LDR     R1, =__cpp(&curr_tcb) //get the address of curr_tcb
     LDR     R7,[R1]         //get the value of curr_tcb
-    STR     R0,[R7]         //get the stack base
+    STR     R0,[R7]         //save the stack base
 
-    //load next context
     LDR     R4,=__cpp(&next_tcb)
     LDR     R4,[R4]
     STR     R4,[R1]         //set curr_task = next_task
+
+	PUSH 	{R5-R7,lr}
+	/*Mpu schedule*/
+	LDR		R0,[R4, #8]
+	LDR		R1,[R4,	#4]
+	BL		mpu_task_schedule
+	POP 	{R5-R7,lr}
+
+    //load next context
     LDR     R0,[R4]
     LDMIA   R0!,{R4-R11}
 
@@ -138,11 +146,17 @@ void SysTick_Handler(void)
     if(!sun_os_start)
         return;
 
+	/*decrease current time remained*/
+    if(curr_tcb->time_left--)
+    	return;
+
+	/*current task has run out of time, time to schedule..*/
+	curr_tcb->time_left = SLICE_TIME;
+
     for(next_tcb = curr_tcb->next_sun_tcb; next_tcb->state == PENDING; next_tcb = next_tcb->next_sun_tcb);
 
-    if(curr_tcb != next_tcb){
+    if(curr_tcb != next_tcb)
         SCB->ICSR |= SCB_ICSR_PENDSVSET_Msk;
-    }
 }
 
 void EXTI15_10_IRQHandler(void)

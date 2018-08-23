@@ -10,6 +10,7 @@
  * the COPYING file in the top-level directory.
  */
 #include "sun_task.h"
+#include "sun_mpu.h"
 
 #define MAX_TASK_NUM  10
 #define HW32_REG(ADDRESS) (*((volatile unsigned long *)(ADDRESS)))
@@ -21,13 +22,18 @@ uint8_t sun_os_start = FALSE;
 
 static uint32_t task_cnt;
 
-int32_t create_task(unsigned int stack, uint32_t stack_size, uint32_t task)
+int32_t create_task(char * name, unsigned int stack, uint32_t stack_size, uint32_t task)
 {
-    if(stack == 0 || stack_size == 0 || task == 0)
+	int32_t ret = 0;
+    if(stack == 0 || stack_size == 0 || task == 0 || task_cnt == MAX_TASK_NUM)
         return PARA_ERR;
 
     tcb_list[task_cnt].stack_base = stack + stack_size - 16*4;
+    tcb_list[task_cnt].stack_size = stack_size;
+    tcb_list[task_cnt].stack_bottom = stack;
     tcb_list[task_cnt].state = RUNNING;
+    tcb_list[task_cnt].time_left = SLICE_TIME;
+    tcb_list[task_cnt].task_name = name;
     /* initial pc */
     HW32_REG((tcb_list[task_cnt].stack_base + (14<<2))) = task;
     /* initial xPSR */
@@ -40,6 +46,10 @@ int32_t create_task(unsigned int stack, uint32_t stack_size, uint32_t task)
 
     task_cnt++;
 
+	ret = mpu_task_init(stack, stack_size);
+	if(ret != 0)
+		return ret;
+
     return NO_ERR;
 }
 
@@ -51,10 +61,7 @@ int32_t start_task(unsigned int task_num)
     curr_tcb = &tcb_list[task_num];
 
     __set_PSP((curr_tcb->stack_base + 16*4));
-
-    __set_CONTROL(0x3);
-
-    __ISB();
+	mpu_task_schedule(curr_tcb->stack_bottom, curr_tcb->stack_size);
 
     sun_os_start = TRUE;
 

@@ -89,7 +89,9 @@ loop:
     timer_in->delta = delta;
     timer->next = timer_in;
     timer_in->next = next_timer;
-    next_timer->delta -= delta;
+	if(next_timer != NULL)
+    	next_timer->delta -= delta;
+		
     return NO_ERR;
 }
 

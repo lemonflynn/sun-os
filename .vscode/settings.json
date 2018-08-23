@@ -1,0 +1,11 @@
+{
+	"files.associations": {
+		"sun_common.h": "c",
+		"sun_task.h": "c",
+		"stm32f4xx_nucleo_144.h": "c",
+		"stm32f4xx_hal.h": "c",
+		"main.h": "c",
+		"sun_mpu.h": "c",
+		"stm32f429xx.h": "c"
+	}
+}

@@ -1,0 +1,4 @@
+Arch/STM32F4/BSP/
+Arch/STM32F4/CMSIS/
+Arch/STM32F4/STM32F4xx_HAL_Driver/
+Objects/
